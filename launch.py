@@ -103,4 +103,4 @@ if __name__ == '__main__':
     if subprocess.run(["which", "ssh"], capture_output=True).returncode != 0:
         print(f"{Colors.RED}[!] Installez SSH: pkg install openssh{Colors.END}")
         sys.exit(1)
-    main(
+    main()

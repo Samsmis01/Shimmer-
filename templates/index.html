@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rencontre PhotoShare</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ff7eb3 0%, #ff758c 100%);
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .photo-preview {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .photo-preview img, .photo-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .file-type-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+        .file-input-label {
+            display: inline-block;
+            background: #4285F4;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .file-input-label input {
+            position: absolute;
+            font-size: 100px;
+            opacity: 0;
+            right: 0;
+            top: 0;
+            cursor: pointer;
+        }
+        #fileInput {
+            display: none;
+        }
+        .counter {
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        /* Nouveau style pour le message d'aide */
+        .ios-help {
+            display: none;
+            font-size: 0.8em;
+            color: rgba(255,255,255,0.8);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Partagez vos médias</h1>
+        <p>Sélectionnez entre 1 et 10 photos/vidéos pour votre profil de rencontre</p>
+        
+        <label class="file-input-label">
+            📸🎥 Choisir des fichiers
+            <input type="file" id="fileInput" accept="image/*,video/*" multiple>
+        </label>
+        <div class="ios-help" id="iosHelp">
+            Sur iOS : Touchez "Parcourir" → "Albums" pour accéder à toute votre galerie
+        </div>
+        
+        <div class="counter">
+            Fichiers sélectionnés: <span id="count">0</span>/10
+        </div>
+        
+        <div class="photo-grid" id="photoGrid">
+            <!-- Les prévisualisations apparaîtront ici -->
+        </div>
+        
+        <button id="submitBtn" disabled>Créer mon profil</button>
+        
+        <p class="disclaimer">
+            En partageant vos fichiers, vous acceptez nos 
+            <a href="#" style="color: #fff; text-decoration: underline;">Conditions d'utilisation</a>.
+            <br>Nous ne partagerons jamais vos fichiers sans votre consentement.
+        </p>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const photoGrid = document.getElementById('photoGrid');
+        const countDisplay = document.getElementById('count');
+        const submitBtn = document.getElementById('submitBtn');
+        const iosHelp = document.getElementById('iosHelp');
+        let selectedFiles = [];
+
+        // Détection iOS
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        // Afficher l'aide pour iOS
+        if(isIOS()) {
+            iosHelp.style.display = 'block';
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            
+            if (files.length > 10) {
+                alert("Maximum 10 fichiers autorisés");
+                fileInput.value = '';
+                return;
+            }
+            
+            selectedFiles = files.slice(0, 10);
+            updateDisplay();
+        });
+
+        function updateDisplay() {
+            countDisplay.textContent = selectedFiles.length;
+            submitBtn.disabled = selectedFiles.length === 0;
+            photoGrid.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'photo-preview';
+                    
+                    const isVideo = file.type.includes('video');
+                    
+                    if (isVideo) {
+                        const video = document.createElement('video');
+                        video.src = e.target.result;
+                        video.controls = true;
+                        video.muted = true;
+                        previewDiv.appendChild(video);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.alt = `Fichier ${index + 1}`;
+                        previewDiv.appendChild(img);
+                    }
+                    
+                    const typeBadge = document.createElement('div');
+                    typeBadge.className = 'file-type-badge';
+                    typeBadge.textContent = isVideo ? 'VIDEO' : file.type.split('/')[1].toUpperCase();
+                    previewDiv.appendChild(typeBadge);
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.textContent = '×';
+                    removeBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        selectedFiles.splice(index, 1);
+                        updateDisplay();
+                    });
+                    previewDiv.appendChild(removeBtn);
+                    
+                    photoGrid.appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        submitBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Envoi en cours...';
+            
+            try {
+                const formData = new FormData();
+                selectedFiles.forEach(file => {
+                    formData.append('medias', file);
+                });
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    window.location.href = "/confirmation";
+                } else {
+                    throw new Error('Échec de l\'envoi');
+                }
+            } catch (error) {
+                alert("Une erreur est survenue lors de l'envoi");
+                console.error(error);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Créez mon profil';
+            }
+        });
+    </script>
+</body>
+  </html
